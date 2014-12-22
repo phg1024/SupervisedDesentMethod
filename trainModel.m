@@ -146,7 +146,7 @@ Nsamples = numel(trainset);
 
 % extract feature vectors for the target shapes
 fprintf('extracting target feature vectors ...\n');
-target_features = cell(Nsamples);
+target_features = cell(Nsamples, 1);
 tic;
 parfor t=1:Nsamples
     coords = reshape(trainset{t}.truth, Nfp, 2);    
@@ -155,7 +155,7 @@ end
 fprintf('done.\n');
 toc;
 
-features = cell(Nsamples);
+features = cell(Nsamples, 1);
 error = zeros(Nsamples, 1);
 for i=1:opts.params.nstages
     % for each stage, estimate R and b

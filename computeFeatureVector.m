@@ -33,13 +33,20 @@ for i=1:4
         block = Gdir(bybegin:byend, bxbegin:bxend);
         Gblock = Gmag(bybegin:byend, bxbegin:bxend);
         bidx = ((i-1)*4 + j-1)*8;
-        for binIdx = 1:8            
-            lset = find(block<cutoffs(binIdx));
+        for binIdx = 1:8
+            lset = find(block<=cutoffs(binIdx));
             rset = find(block>cutoffs(binIdx+1));
-            fvec(bidx + binIdx) = sum(Gblock(intersect(lset, rset)));
+            %fvec(bidx + binIdx) = sum(Gblock(intersect(lset, rset)));
+            fvec(bidx + binIdx) = length(intersect(lset, rset));
         end
     end
 end
 
-fvec = fvec / norm(fvec);
+if norm(fvec) < 1e-9
+    % nothing to do
+else
+    fvec = fvec / norm(fvec);
+    fvec = min(fvec, 0.2);
+    fvec = fvec / norm(fvec);
+end
 end
