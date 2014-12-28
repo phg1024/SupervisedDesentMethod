@@ -2,13 +2,12 @@ function stage = computeDescentDirection(trainset, features, target_features)
 fprintf('computing descent direction ...\n');
 N = numel(trainset);
 Lfp = length(trainset{1}.guess); Nfp = Lfp/2;
-Lfeat = length(cell2mat(features{1}));
 dx = zeros(N, Lfp);
-dphi = zeros(N, Lfeat);
+dphi = features - target_features;
 
 for i=1:N
     dx(i,:) = trainset{i}.truth - trainset{i}.guess;
-    dphi(i,:) = cell2mat(features{i}) - cell2mat(target_features{i});
+    %dphi(i,:) = features(i,:) - (target_features{i});
 end
 fprintf('dx and dphi computed.\n');
 

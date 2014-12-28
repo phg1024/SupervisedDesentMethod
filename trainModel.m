@@ -152,20 +152,21 @@ fprintf('max error = %.6f, mean error = %.6f\n', maxError, totalError / numel(tr
 Nfp = opts.npts; Lfp = Nfp * 2;
 stages = cell(opts.params.nstages, 1);
 Nsamples = numel(trainset);
+Lfeat = opts.params.nbins * opts.params.nblocks * opts.params.nblocks;
 
 % extract feature vectors for the target shapes
 fprintf('extracting target feature vectors ...\n');
-target_features = cell(Nsamples, 1);
+target_features = zeros(Nsamples, Lfeat*Nfp);
 tic;
 parfor t=1:Nsamples
     coords = reshape(trainset{t}.truth, Nfp, 2);    
-    target_features{t} = extractFeature(trainset{t}, coords, ...
+    target_features(t,:) = extractFeature(trainset{t}, coords, ...
         opts.params.feat_window_size, opts.params.nbins, opts.params.cell_size, opts.params.nblocks);
 end
 fprintf('done.\n');
 toc;
 
-features = cell(Nsamples, 1);
+features = zeros(Nsamples, Lfeat * Nfp);
 error = zeros(Nsamples, 2);
 for i=1:opts.params.nstages
     % for each stage, estimate R and b
@@ -175,7 +176,7 @@ for i=1:opts.params.nstages
     tic;
     parfor t=1:Nsamples
         coords = reshape(trainset{t}.guess, Nfp, 2);   
-        features{t} = extractFeature(trainset{t}, coords, ...
+        features(t,:) = extractFeature(trainset{t}, coords, ...
             opts.params.feat_window_size, opts.params.nbins, opts.params.cell_size, opts.params.nblocks);
     end
     fprintf('done.\n');
@@ -185,11 +186,22 @@ for i=1:opts.params.nstages
     stages{i} = computeDescentDirection(trainset, features, target_features);
     
     % update the guess
-    for t=1:Nsamples
-        trainset{t}.guess = trainset{t}.guess + (stages{i}.R * (cell2mat(features{t}) * stages{i}.pVecs)')' + stages{i}.b;
-        error(t,:) = shapeError(trainset{t}.guess, trainset{t}.truth);
-        if 0
-            clf;showTrainingSample(trainset{t});pause;
+    if 0
+        for t=1:Nsamples
+            trainset{t}.guess = trainset{t}.guess + (stages{i}.R * (cell2mat(features{t}) * stages{i}.pVecs)')' + stages{i}.b;
+            error(t,:) = shapeError(trainset{t}.guess, trainset{t}.truth);
+            if 0
+                clf;showTrainingSample(trainset{t});pause;
+            end        
+        end
+    else
+        deltaShape = (features * stages{i}.pVecs) * stages{i}.R';
+        for t=1:Nsamples
+            trainset{t}.guess = trainset{t}.guess + deltaShape(t,:) + stages{i}.b;
+            error(t,:) = shapeError(trainset{t}.guess, trainset{t}.truth);
+            if 0
+                clf;showTrainingSample(trainset{t});pause;
+            end             
         end        
     end
     
