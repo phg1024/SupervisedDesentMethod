@@ -113,31 +113,40 @@ fprintf('%d valid training images found.\n', trainset_size);
 % Train the model
 model = struct();
 
+[meanshape, scaleMean, scaleVar, translationMean, translationVar] = computeMeanShape(init_trainset);
+scaleMean = 1.0;
+scaleVar = 0.025;
+translationMean = 0.0;
+translationVar = 0.025;
+
 %% Augment the training set first
 oversamples = opts.params.oversample_rate;
 trainset = cell(trainset_size*oversamples, 1);
 
 idx = 0;
 maxError = 0;
+totalError = 0;
 for t=1:trainset_size
-    % randomly choose some shapes as initial shapes
-    indices = randperm(trainset_size, oversamples);
+    % create training samples with the mean shape
     for j=1:oversamples
         idx = idx + 1;
         trainset{idx} = init_trainset{t};
-        trainset{idx}.guess = init_trainset{indices(j)}.truth;
+                
+        % align the guess shape with the ground truth
+        %trainset{idx}.guess = alignShape(meanshape, trainset{idx}.truth);   
+        trainset{idx}.guess = alignShapeToBox(meanshape, trainset{idx}.box);
+        trainset{idx}.guess = perturbShape(trainset{idx}.guess, trainset{idx}.box, scaleMean, scaleVar, translationMean, translationVar);
         
-        % align the guess shape with the box
-        trainset{idx}.guess = alignShapeToBox(trainset{idx}.guess, init_trainset{indices(j)}.box, trainset{idx}.box);
-        
-        maxError = max(norm(trainset{idx}.guess - trainset{idx}.truth), maxError);
+        [maxE, meanE] = shapeError(trainset{idx}.guess, trainset{idx}.truth);
+        maxError = max(maxE, maxError);
+        totalError = totalError + meanE;
         if 0
             clf;showTrainingSample(trainset{idx});pause;
         end
     end
 end
 fprintf('training data augmentation finished. %d training samples in total.\n', numel(trainset));
-maxError
+fprintf('max error = %.6f, mean error = %.6f\n', maxError, totalError / numel(trainset));
 
 %% begin the training process
 Nfp = opts.npts; Lfp = Nfp * 2;
@@ -150,13 +159,14 @@ target_features = cell(Nsamples, 1);
 tic;
 parfor t=1:Nsamples
     coords = reshape(trainset{t}.truth, Nfp, 2);    
-    target_features{t} = extractFeature(trainset{t}, coords, opts.params.feat_window_size);
+    target_features{t} = extractFeature(trainset{t}, coords, ...
+        opts.params.feat_window_size, opts.params.nbins, opts.params.cell_size, opts.params.nblocks);
 end
 fprintf('done.\n');
 toc;
 
 features = cell(Nsamples, 1);
-error = zeros(Nsamples, 1);
+error = zeros(Nsamples, 2);
 for i=1:opts.params.nstages
     % for each stage, estimate R and b
     fprintf('stage %d ...\n', i);
@@ -165,7 +175,8 @@ for i=1:opts.params.nstages
     tic;
     parfor t=1:Nsamples
         coords = reshape(trainset{t}.guess, Nfp, 2);   
-        features{t} = extractFeature(trainset{t}, coords, opts.params.feat_window_size);
+        features{t} = extractFeature(trainset{t}, coords, ...
+            opts.params.feat_window_size, opts.params.nbins, opts.params.cell_size, opts.params.nblocks);
     end
     fprintf('done.\n');
     toc;
@@ -174,19 +185,30 @@ for i=1:opts.params.nstages
     stages{i} = computeDescentDirection(trainset, features, target_features);
     
     % update the guess
-    parfor t=1:Nsamples
+    for t=1:Nsamples
         trainset{t}.guess = trainset{t}.guess + (stages{i}.R * (cell2mat(features{t}) * stages{i}.pVecs)')' + stages{i}.b;
-        error(t) = norm(trainset{t}.guess - trainset{t}.truth);
+        error(t,:) = shapeError(trainset{t}.guess, trainset{t}.truth);
+        if 0
+            clf;showTrainingSample(trainset{t});pause;
+        end        
     end
     
-    max(error)
+    fprintf('max error = %.6f, mean error = %.6f\n', max(error(:,1)), mean(error(:, 2)));
 end
 
+model.meanshape = meanshape;
+model.scaleVar = scaleVar;
+model.scaleMean = scaleMean;
+model.translationVar = translationVar;
+model.translationMean = translationMean;
 model.init_shapes = init_shapes;
 model.init_boxes = init_boxes;
 model.stages = stages;
 model.window_size = opts.params.window_size;
 model.feat_window_size = opts.params.feat_window_size;
+model.feat_nbins = opts.params.nbins;
+model.feat_nblocks = opts.params.nblocks;
+model.feat_cellsize = opts.params.cell_size;
 end
 
 function idxstr = num2index(v, digits)

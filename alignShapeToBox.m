@@ -1,8 +1,11 @@
-function shape = alignShapeToBox(shape0, box0, box)
+function shape = alignShapeToBox(shape0, box)
 npts = length(shape0)/2;
 shape = reshape(shape0, npts, 2);
 
-scale = box(3) / box0(3);
+maxPt = max(shape0);
+minPt = min(shape0);
+extentPt = maxPt - minPt;
+scale = box(3) / max(extentPt);
 
 % align point 1 to origin
 %x0 = box0(1); y0 = box0(2);

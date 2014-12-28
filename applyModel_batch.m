@@ -56,25 +56,26 @@ for bidx = 1:numel(boxes)
     newbox = box;
     newbox(1) = newbox(1) - nbx_tl; newbox(2) = newbox(2) - nby_tl;
     
-    ntrials = 5; nneighbors = 3;
-    idx = randperm(numel(model.init_shapes), ntrials);
+    ntrials = 1; nneighbors = 1;    
     Lfp = 136; Nfp = Lfp/2;
     
-    guess = cell2mat(model.init_shapes(idx));
+    guess = zeros(ntrials, Lfp);
     for t=1:ntrials
-        guess(t,:) = alignShapeToBox(guess(t,:), model.init_boxes{idx(t)}, newbox);
+        guess(t,:) = alignShapeToBox(model.meanshape, box);
+        guess(t,:) = perturbShape(guess(t,:), box, model.scaleMean, model.scaleVar, model.translationMean, model.translationVar);
     end
     
     features = cell(ntrials, 1);
     
     T = numel(model.stages);
     for t=1:T
-        parfor j=1:ntrials
+        for j=1:ntrials
             features{j} = cell(1, Nfp);
             coords = reshape(guess(j, :), Nfp, 2);
             for k=1:Nfp
                 x = coords(k, 1); y = coords(k, 2);
-                features{j}{k} = computeFeatureVector(newimg, x, y, model.feat_window_size);
+                features{j}{k} = computeFeatureVector(newimg, x, y, ...
+                    model.feat_window_size, model.feat_nbins, model.feat_cellsize, model.feat_nblocks);
             end                 
             
             guess(j,:) = guess(j,:) + (model.stages{t}.R * (cell2mat(features{j}) * model.stages{t}.pVecs)')' + model.stages{t}.b;
@@ -83,8 +84,10 @@ for bidx = 1:numel(boxes)
     results = guess;
     
     % pick k best results
-    nearestNeighbors = knnsearch(results, mean(results), 'K', nneighbors);
-    points{bidx} = median(results(nearestNeighbors, :));
+    %nearestNeighbors = knnsearch(results, mean(results), 'K', nneighbors);
+    %points{bidx} = median(results(nearestNeighbors, :));
+    
+    points{bidx} = results;
     
     % restore the correct positions
     points{bidx} = reshape(points{bidx}, Nfp, 2);

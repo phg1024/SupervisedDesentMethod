@@ -35,9 +35,11 @@ end
 
 tropts.params.window_size = 128.0;
 tropts.params.feat_window_size = 32;
-tropts.params.nbins = 18;
-tropts.params.oversample_rate = 1;
-tropts.params.nstages = 5;
+tropts.params.nbins = 8;
+tropts.params.cell_size = 8;
+tropts.params.nblocks = 4;
+tropts.params.oversample_rate = 10;
+tropts.params.nstages = 10;
 
 % train model
 tic;
