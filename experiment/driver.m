@@ -48,17 +48,24 @@ for sid = 1:length(steps)
     n = 10;
     
     % train model
-    R = cell(n,1);      x = cell(n, 1);
+    R = cell(n,1); b = cell(n, 1); x = cell(n, 1);
     phi = cell(n, 1);   error = zeros(n, 1);
     x{1} = repmat(c, length(x0), 1);
     error(1) = norm(x{1} - x0);
     for k=2:n
         dx = x0 - x{k-1};
         phi{k-1} = h(x{k-1});
+        % NOTE: For simple functions, y0 must be used in training to
+        % obtained the descent directions.
+        % In face alignment, y0 is not used for training so that the
+        % correct descent directions are learnt. In that case, dphi becomes
+        % phi instead, and b must be learnt using the equation below.
         dphi = y0 - phi{k-1};
         R{k-1} = (dphi'*dphi)\(dphi'*dx);
+        % no need to learn b since ystar is known
+        % just keep it here for demonstration
         b{k-1} = mean(dx) - R{k-1} * mean(dphi);
-        x{k} = x{k-1} + R{k-1} * dphi;
+        x{k} = x{k-1} + R{k-1} * dphi + b{k-1};
         error(k) = norm(x{k} - x0);
     end
     
