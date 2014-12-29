@@ -114,10 +114,6 @@ fprintf('%d valid training images found.\n', trainset_size);
 model = struct();
 
 [meanshape, scaleMean, scaleVar, translationMean, translationVar] = computeMeanShape(init_trainset);
-scaleMean = 1.0;
-scaleVar = 0.025;
-translationMean = 0.0;
-translationVar = 0.025;
 
 %% Augment the training set first
 oversamples = opts.params.oversample_rate;
