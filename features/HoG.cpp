@@ -102,7 +102,6 @@ void HoG(double *pixels, double *params, int *img_size, double *dth_des, unsigne
             if (grad_or<0) grad_or+=pi + (orient==1) * pi;
 
             // trilinear interpolation
-            
             bin1 = (int)floor(0.5 + grad_or/bin_size) - 1;
             bin2 = bin1 + 1;
             x1   = (int)floor(0.5+ x/cwidth);
@@ -122,6 +121,8 @@ void HoG(double *pixels, double *params, int *img_size, double *dth_des, unsigne
                 bin1=nb_bins-1;
             }            
            
+		    // use the orientation only
+		    // grad_mag = 1.0;
             h[y1][x1][bin1]= h[y1][x1][bin1]+grad_mag*(1-((x+1-Xc)/cwidth))*(1-((y+1-Yc)/cwidth))*(1-((grad_or-Oc)/bin_size));
             h[y1][x1][bin2]= h[y1][x1][bin2]+grad_mag*(1-((x+1-Xc)/cwidth))*(1-((y+1-Yc)/cwidth))*(((grad_or-Oc)/bin_size));
             h[y2][x1][bin1]= h[y2][x1][bin1]+grad_mag*(1-((x+1-Xc)/cwidth))*(((y+1-Yc)/cwidth))*(1-((grad_or-Oc)/bin_size));
